@@ -35,7 +35,7 @@ const middlewareLogResponses = (req: Request, res: Response, next: NextFunction)
 
         }
 
-    })
+    });
     next();
 }
 
