@@ -1,9 +1,15 @@
 import express, {NextFunction} from "express";
 import {Request, Response} from "express";
+import {migrate} from "drizzle-orm/postgres-js/migrator";
+import postgres from "postgres";
+import {drizzle} from "drizzle-orm/postgres-js";
 import {config} from "./config.js";
 
+const migrationClient = postgres(config.db.url, {max:1});
+await migrate(drizzle(migrationClient), config.db.migrationConfig);
+
 const app = express();
-const PORT = 8080;
+
 
 class badRequestError extends Error {
     constructor(message: string) {
@@ -37,19 +43,19 @@ const handlerReadiness = (req: Request, res: Response) => {
 }
 
 const handlerRequests = (req: Request, res: Response) => {
-    res.set('Hits', `${config.fileserverHits}`);
+    res.set('Hits', `${config.api.fileserverHits}`);
     res.set('Content-Type', 'text/html; charset=utf-8');
     res.send(`<html>
   <body>
     <h1>Welcome, Chirpy Admin</h1>
-    <p>Chirpy has been visited ${config.fileserverHits} times!</p>
+    <p>Chirpy has been visited ${config.api.fileserverHits} times!</p>
   </body>
 </html>`)
 }
 
 const handlerReset = (req: Request, res: Response) => {
-    config.fileserverHits = 0;
-    res.set('Hits', `${config.fileserverHits}`);
+    config.api.fileserverHits = 0;
+    res.set('Hits', `${config.api.fileserverHits}`);
     res.send();
 }
 
@@ -65,7 +71,7 @@ const middlewareLogResponses = (req: Request, res: Response, next: NextFunction)
 }
 
 function middlewareMetricsInc(req: Request, res: Response, next: NextFunction) {
-    config.fileserverHits++;
+    config.api.fileserverHits++;
     next();
 }
 
@@ -117,6 +123,7 @@ function handlerValidation(req: Request, res: Response) {
 
 }
 
+
 app.get("/api/healthz", handlerReadiness);
 app.use(middlewareLogResponses);
 app.use("/app", middlewareErrorHandling, middlewareMetricsInc, express.static("./src/app"));
@@ -126,6 +133,6 @@ app.post("/admin/reset", handlerReset);
 app.use("/admin/reset", express.static("./api/reset"));
 app.post("/api/validate_chirp", express.json(), handlerValidation, middlewareErrorHandling,);
 app.use("/api/validate_chirp", express.static("./api/validate_chirp"));
-app.listen(PORT, () => {
-    console.log(`Server is running at http://localhost:${PORT}`);
+app.listen(config.api.port, () => {
+    console.log(`Server is running at http://localhost:${config.api.port}`);
 })
