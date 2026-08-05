@@ -1,6 +1,5 @@
 import { drizzle } from "drizzle-orm/postgres-js";
 import postgres from "postgres";
-import {MigrationConfig} from "drizzle-orm/migrator";
 import * as schema from "./schema.js";
 import { config } from "../config.js";
 

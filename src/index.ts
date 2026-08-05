@@ -1,138 +1,51 @@
-import express, {NextFunction} from "express";
-import {Request, Response} from "express";
 import {migrate} from "drizzle-orm/postgres-js/migrator";
 import postgres from "postgres";
 import {drizzle} from "drizzle-orm/postgres-js";
 import {config} from "./config.js";
+
+import {handlerMetrics} from "./api/handlerMetrics.js";
+import {handlerValidation} from "./api/handlerValidation.js";
+import {handlerReadiness} from "./api/handlerReadiness.js";
+import {
+    middlewareMetricsInc,
+    middlewareLogResponses,
+    middlewareErrorHandling}
+    from "./api/middleware.js";
+import express from "express";
+import {handlerReset} from "./api/handlerReset.js";
+import {handlerUsers} from "./api/handlerUsers.js";
 
 const migrationClient = postgres(config.db.url, {max:1});
 await migrate(drizzle(migrationClient), config.db.migrationConfig);
 
 const app = express();
 
-
-class badRequestError extends Error {
-    constructor(message: string) {
-        super(message);
-    }
-}
-
-class unauthorizedError extends Error {
-    constructor(message: string) {
-        super(message);
-    }
-}
-
-class forbiddenError extends Error {
-    constructor(message: string) {
-        super(message);
-    }
-}
-
-class notFoundError extends Error {
-    constructor(message: string) {
-        super(message);
-    }
-}
-
-
-
-const handlerReadiness = (req: Request, res: Response) => {
-    res.set('Content-Type', 'text/plain; charset=utf-8');
-    res.send("OK");
-}
-
-const handlerRequests = (req: Request, res: Response) => {
-    res.set('Hits', `${config.api.fileserverHits}`);
-    res.set('Content-Type', 'text/html; charset=utf-8');
-    res.send(`<html>
-  <body>
-    <h1>Welcome, Chirpy Admin</h1>
-    <p>Chirpy has been visited ${config.api.fileserverHits} times!</p>
-  </body>
-</html>`)
-}
-
-const handlerReset = (req: Request, res: Response) => {
-    config.api.fileserverHits = 0;
-    res.set('Hits', `${config.api.fileserverHits}`);
-    res.send();
-}
-
-const middlewareLogResponses = (req: Request, res: Response, next: NextFunction)=> {
-    res.on("finish", () =>{
-        if (res.statusCode != 200) {
-            console.log(`[NON-OK] ${req.method} ${req.url} - Status: ${res.statusCode}`);
-
-        }
-
-    });
-    next();
-}
-
-function middlewareMetricsInc(req: Request, res: Response, next: NextFunction) {
-    config.api.fileserverHits++;
-    next();
-}
-
-function middlewareErrorHandling(err:Error, req: Request, res: Response, next: NextFunction) {
-    console.log("Something went wrong on our end")
-
-    if (err instanceof badRequestError) {
-        res.status(400).json({error: err.message});
-    }
-    else if (err instanceof forbiddenError) {
-        res.status(403).json({error: err.message});
-    }
-    else if (err instanceof unauthorizedError){
-        res.status(402).json({error: err.message});
-    }
-    else if (err instanceof notFoundError) {
-        res.status(404).json({error: err.message});
-    }
-    else {
-        res.status(500).send(`{"error": "Something went wrong on our end"}`)
-    }
-        next();
-}
-
-function handlerValidation(req: Request, res: Response) {
-    const INVALID_WORDS = ["KERFUFFLE", "SHARBERT", "FORNAX"];
-
-        const request = req.body;
-        if (req.body.body.length > 140)
-        {
-            throw new badRequestError(`Chirp is too long. Max length is 140`);
-        }
-        const replacement:string = "****";
-        const words:string[] = request.body.split(" ");
-        let clean:string[] = []
-        for (let i = 0; i < words.length; i++) {
-            let word = words[i].toUpperCase();
-
-            if (INVALID_WORDS.includes(word)) {
-                clean.push(replacement);
-            }
-            else{
-                clean.push(words[i]);
-            }
-        }
-
-        res.status(200).send(`{"cleanedBody": "${clean.join(' ')}"}`);
-        return;
-
-}
-
-
-app.get("/api/healthz", handlerReadiness);
 app.use(middlewareLogResponses);
-app.use("/app", middlewareErrorHandling, middlewareMetricsInc, express.static("./src/app"));
-app.get("/admin/metrics", handlerRequests);
-app.use("/admin/metrics", express.static("./admin/metrics"));
-app.post("/admin/reset", handlerReset);
-app.use("/admin/reset", express.static("./api/reset"));
-app.post("/api/validate_chirp", express.json(), handlerValidation, middlewareErrorHandling,);
-app.use("/api/validate_chirp", express.static("./api/validate_chirp"));
-app.listen(config.api.port, () => {
-    console.log(`Server is running at http://localhost:${config.api.port}`);
+app.use(express.json());
+
+app.use("/app",  middlewareMetricsInc, express.static("./src/app"));
+
+app.get("/api/healthz", (req, res, next) => {
+    Promise.resolve(handlerReadiness(req, res)).catch(next);
+});
+
+app.get("/admin/metrics", (req, res, next) => {
+        Promise.resolve(handlerMetrics(req, res)).catch(next);
+    });
+
+app.post("/admin/reset", (req, res, next) => {
+        Promise.resolve(handlerReset(req, res)).catch(next);
+    });
+
+app.post("/api/validate_chirp", (req, res, next) => {
+        Promise.resolve(handlerValidation(req, res)).catch(next);
+    });
+
+app.post("/api/users", (req, res, next) => {
+    Promise.resolve(handlerUsers(req, res)).catch(next);
 })
+app.use(middlewareErrorHandling);
+
+app.listen(config.api.port, () => {
+        console.log(`Server is running at http://localhost:${config.api.port}`);
+    });
