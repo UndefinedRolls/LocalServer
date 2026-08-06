@@ -2,7 +2,7 @@ import {migrate} from "drizzle-orm/postgres-js/migrator";
 import postgres from "postgres";
 import {drizzle} from "drizzle-orm/postgres-js";
 import {config} from "./config.js";
-
+import {handlerChirps} from "./api/handlerChirps.js";
 import {handlerMetrics} from "./api/handlerMetrics.js";
 import {handlerValidation} from "./api/handlerValidation.js";
 import {handlerReadiness} from "./api/handlerReadiness.js";
@@ -37,7 +37,7 @@ app.post("/admin/reset", (req, res, next) => {
         Promise.resolve(handlerReset(req, res)).catch(next);
     });
 
-app.post("/api/validate_chirp", (req, res, next) => {
+app.post("/api/chirps", (req, res, next) => {
         Promise.resolve(handlerValidation(req, res)).catch(next);
     });
 

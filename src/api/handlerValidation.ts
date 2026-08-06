@@ -1,6 +1,7 @@
 import {Request, Response} from "express";
 import {respondWithJSON} from "./json.js";
 import {badRequestError} from "./errors.js";
+import {handlerChirps} from "./handlerChirps.js";
 
 export async function handlerValidation(req: Request, res: Response) {
     type parameters = {
@@ -28,5 +29,6 @@ export async function handlerValidation(req: Request, res: Response) {
         }
     }
     const cleaned = clean.join(' ');
-    respondWithJSON(res, 200, {cleanedBody: cleaned});
+    req.body.body = cleaned;
+    handlerChirps(req, res);
 }
