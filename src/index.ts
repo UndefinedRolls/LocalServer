@@ -2,7 +2,7 @@ import {migrate} from "drizzle-orm/postgres-js/migrator";
 import postgres from "postgres";
 import {drizzle} from "drizzle-orm/postgres-js";
 import {config} from "./config.js";
-import {handlerChirps} from "./api/handlerChirps.js";
+import {handlerChirps, handlerGetChirps, handlerGetOneChirp} from "./api/handlerChirps.js";
 import {handlerMetrics} from "./api/handlerMetrics.js";
 import {handlerValidation} from "./api/handlerValidation.js";
 import {handlerReadiness} from "./api/handlerReadiness.js";
@@ -13,7 +13,7 @@ import {
     from "./api/middleware.js";
 import express from "express";
 import {handlerReset} from "./api/handlerReset.js";
-import {handlerUsers} from "./api/handlerUsers.js";
+import {handlerUserLogin, handlerUsers} from "./api/handlerUsers.js";
 
 const migrationClient = postgres(config.db.url, {max:1});
 await migrate(drizzle(migrationClient), config.db.migrationConfig);
@@ -32,6 +32,12 @@ app.get("/api/healthz", (req, res, next) => {
 app.get("/admin/metrics", (req, res, next) => {
         Promise.resolve(handlerMetrics(req, res)).catch(next);
     });
+app.get("/api/chirps", (req, res, next) => {
+    Promise.resolve(handlerGetChirps(req, res)).catch(next);
+});
+app.get("/api/chirps/:chirpId", (req, res, next) => {
+    Promise.resolve(handlerGetOneChirp(req, res)).catch(next);
+})
 
 app.post("/admin/reset", (req, res, next) => {
         Promise.resolve(handlerReset(req, res)).catch(next);
@@ -43,6 +49,9 @@ app.post("/api/chirps", (req, res, next) => {
 
 app.post("/api/users", (req, res, next) => {
     Promise.resolve(handlerUsers(req, res)).catch(next);
+})
+app.post("/api/login", (req, res, next) => {
+    Promise.resolve(handlerUserLogin(req, res)).catch(next);
 })
 app.use(middlewareErrorHandling);
 

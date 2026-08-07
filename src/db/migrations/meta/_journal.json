@@ -8,6 +8,20 @@
       "when": 1785413274123,
       "tag": "0000_watery_black_knight",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1785978106802,
+      "tag": "0001_confused_fallen_one",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1786036486795,
+      "tag": "0002_mean_surge",
+      "breakpoints": true
     }
   ]
 }
